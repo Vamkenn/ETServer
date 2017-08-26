@@ -1,4 +1,6 @@
-﻿namespace Model
+﻿using MongoDB.Bson.Serialization.Attributes;
+
+namespace Model
 {
 	public abstract class AMessage
 	{
@@ -6,6 +8,7 @@
 
 	public abstract class ARequest: AMessage
 	{
+		[BsonIgnoreIfDefault]
 		public uint RpcId;
 	}
 
