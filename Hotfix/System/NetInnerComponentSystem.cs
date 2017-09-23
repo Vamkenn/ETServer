@@ -21,7 +21,7 @@ namespace Hotfix
 		}
 	}
 	
-	public static class NetInnerSystem
+	public static class NetInnerComponentSystem
 	{
 		public static void Awake(this NetInnerComponent self)
 		{

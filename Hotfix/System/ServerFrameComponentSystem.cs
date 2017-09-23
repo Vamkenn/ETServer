@@ -11,7 +11,7 @@ namespace Hotfix
         }
     }
 	
-    public static class ServerFrameSystem
+    public static class ServerFrameComponentSystem
     {
         public static void Awake(this ServerFrameComponent self)
         {

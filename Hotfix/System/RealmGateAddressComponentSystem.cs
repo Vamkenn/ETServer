@@ -11,7 +11,7 @@ namespace Hotfix
 		}
 	}
 	
-	public static class RealmGateAddressSystem
+	public static class RealmGateAddressComponentSystem
 	{
 		public static void Start(this RealmGateAddressComponent component)
 		{

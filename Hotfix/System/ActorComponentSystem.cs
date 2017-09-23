@@ -5,7 +5,7 @@ using Model;
 namespace Hotfix
 {
 	[ObjectEvent]
-	public class ActorComponentEvent : ObjectEvent<ActorComponent>, IAwake, IAwake<IEntityActorHandler>
+	public class ActorComponentEvent : ObjectEvent<ActorComponent>, IAwake, IAwake<IEntityActorHandler>, ILoad
 	{
 		public void Awake()
 		{
@@ -16,12 +16,16 @@ namespace Hotfix
 		{
 			this.Get().Awake(iEntityActorHandler);
 		}
+
+		public void Load()
+		{
+		}
 	}
 
 	/// <summary>
 	/// 挂上这个组件表示该Entity是一个Actor, 它会将Entity位置注册到Location Server, 接收的消息将会队列处理
 	/// </summary>
-	public static class ActorSystem
+	public static class ActorComponentSystem
 	{
 		public static void Awake(this ActorComponent self)
 		{
@@ -39,6 +43,12 @@ namespace Hotfix
 			self.actorId = self.Entity.Id;
 			Game.Scene.GetComponent<ActorManagerComponent>().Add(self.Entity);
 			self.HandleAsync();
+		}
+
+		// 热更新要重新创建接口,以便接口也能实现热更新
+		public static void Load(this ActorComponent self)
+		{
+			self.entityActorHandler = (IEntityActorHandler) HotfixHelper.Create(self.entityActorHandler);
 		}
 
 		public static async Task AddLocation(this ActorComponent self)

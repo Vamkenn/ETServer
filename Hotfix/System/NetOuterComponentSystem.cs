@@ -21,7 +21,7 @@ namespace Hotfix
 		}
 	}
 
-	public static class NetOuterSystem
+	public static class NetOuterComponentSystem
 	{
 		public static void Awake(this NetOuterComponent self)
 		{
