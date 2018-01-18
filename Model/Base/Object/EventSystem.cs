@@ -5,13 +5,19 @@ using System.Reflection;
 
 namespace Model
 {
+	public enum DLLType
+	{
+		Model,
+		Hotfix,
+	}
+
 	public interface IObjectEvent
 	{
 		Type Type();
 		void Set(object value);
 	}
 
-	public abstract class ObjectEvent<T> : IObjectEvent
+	public abstract class ObjectSystem<T> : IObjectEvent
 	{
 		private T value;
 
@@ -31,64 +37,87 @@ namespace Model
 		}
 	}
 
-	public sealed class ObjectEvents
+	public sealed class EventSystem
 	{
-		private static ObjectEvents instance;
+		private static EventSystem instance;
 
-		public static ObjectEvents Instance
+		public static EventSystem Instance
 		{
 			get
 			{
-				return instance ?? (instance = new ObjectEvents());
+				return instance ?? (instance = new EventSystem());
 			}
 		}
 
-		private readonly Dictionary<string, Assembly> assemblies = new Dictionary<string, Assembly>();
-
-		private Dictionary<Type, IObjectEvent> disposerEvents;
-
-		private EQueue<Disposer> updates = new EQueue<Disposer>();
-		private EQueue<Disposer> updates2 = new EQueue<Disposer>();
-
-		private EQueue<Disposer> starts = new EQueue<Disposer>();
-
-		private EQueue<Disposer> loaders = new EQueue<Disposer>();
-		private EQueue<Disposer> loaders2 = new EQueue<Disposer>();
-		
-		public void Add(string name, Assembly assembly)
+		public static void Close()
 		{
-			this.assemblies[name] = assembly;
+			instance = null;
+		}
 
-			this.disposerEvents = new Dictionary<Type, IObjectEvent>();
-			foreach (Assembly ass in this.assemblies.Values)
+		private readonly Dictionary<DLLType, Assembly> assemblies = new Dictionary<DLLType, Assembly>();
+
+		private readonly Dictionary<EventIdType, List<object>> allEvents = new Dictionary<EventIdType, List<object>>();
+
+		private readonly Dictionary<Type, IObjectEvent> disposerEvents = new Dictionary<Type, IObjectEvent>();
+
+		private Queue<Disposer> updates = new Queue<Disposer>();
+		private Queue<Disposer> updates2 = new Queue<Disposer>();
+
+		private readonly Queue<Disposer> starts = new Queue<Disposer>();
+
+		private Queue<Disposer> loaders = new Queue<Disposer>();
+		private Queue<Disposer> loaders2 = new Queue<Disposer>();
+		
+		public void Add(DLLType dllType, Assembly assembly)
+		{
+			this.assemblies[dllType] = assembly;
+
+			this.disposerEvents.Clear();
+
+			Type[] types = DllHelper.GetMonoTypes();
+			foreach (Type type in types)
 			{
-				Type[] types = ass.GetTypes();
-				foreach (Type type in types)
+				object[] attrs = type.GetCustomAttributes(typeof(ObjectEventAttribute), false);
+
+				if (attrs.Length == 0)
 				{
-					object[] attrs = type.GetCustomAttributes(typeof(ObjectEventAttribute), false);
+					continue;
+				}
 
-					if (attrs.Length == 0)
-					{
-						continue;
-					}
+				object obj = Activator.CreateInstance(type);
+				IObjectEvent objectEvent = obj as IObjectEvent;
+				if (objectEvent == null)
+				{
+					Log.Error($"组件事件没有继承IObjectEvent: {type.Name}");
+					continue;
+				}
+				this.disposerEvents[objectEvent.Type()] = objectEvent;
+			}
 
+
+			allEvents.Clear();
+			foreach (Type type in types)
+			{
+				object[] attrs = type.GetCustomAttributes(typeof(EventAttribute), false);
+
+				foreach (object attr in attrs)
+				{
+					EventAttribute aEventAttribute = (EventAttribute)attr;
 					object obj = Activator.CreateInstance(type);
-					IObjectEvent objectEvent = obj as IObjectEvent;
-					if (objectEvent == null)
+					if (!this.allEvents.ContainsKey((EventIdType)aEventAttribute.Type))
 					{
-						Log.Error($"组件事件没有继承IObjectEvent: {type.Name}");
-						continue;
+						this.allEvents.Add((EventIdType)aEventAttribute.Type, new List<object>());
 					}
-					this.disposerEvents[objectEvent.Type()] = objectEvent;
+					this.allEvents[(EventIdType)aEventAttribute.Type].Add(obj);
 				}
 			}
 
 			this.Load();
 		}
 
-		public Assembly Get(string name)
+		public Assembly Get(DLLType dllType)
 		{
-			return this.assemblies[name];
+			return this.assemblies[dllType];
 		}
 
 		public Assembly[] GetAll()
@@ -277,6 +306,93 @@ namespace Model
 			}
 			
 			ObjectHelper.Swap(ref this.updates, ref this.updates2);
+		}
+
+		public void Run(EventIdType type)
+		{
+			List<object> iEvents;
+			if (!this.allEvents.TryGetValue(type, out iEvents))
+			{
+				return;
+			}
+			foreach (object obj in iEvents)
+			{
+				try
+				{
+					IEvent iEvent = (IEvent)obj;
+					iEvent.Run();
+				}
+				catch (Exception e)
+				{
+					Log.Error(e.ToString());
+				}
+			}
+		}
+
+		public void Run<A>(EventIdType type, A a)
+		{
+			List<object> iEvents;
+			if (!this.allEvents.TryGetValue(type, out iEvents))
+			{
+				return;
+			}
+
+			foreach (object obj in iEvents)
+			{
+				try
+				{
+					IEvent<A> iEvent = (IEvent<A>)obj;
+					iEvent.Run(a);
+				}
+				catch (Exception err)
+				{
+					Log.Error(err.ToString());
+				}
+			}
+		}
+
+		public void Run<A, B>(EventIdType type, A a, B b)
+		{
+			List<object> iEvents;
+			if (!this.allEvents.TryGetValue(type, out iEvents))
+			{
+				return;
+			}
+
+			foreach (object obj in iEvents)
+			{
+				try
+				{
+					IEvent<A, B> iEvent = (IEvent<A, B>)obj;
+					iEvent.Run(a, b);
+				}
+				catch (Exception err)
+				{
+					Log.Error(err.ToString());
+				}
+			}
+		}
+
+		public void Run<A, B, C>(EventIdType type, A a, B b, C c)
+		{
+			List<object> iEvents;
+			if (!this.allEvents.TryGetValue(type, out iEvents))
+			{
+				return;
+			}
+
+			foreach (object obj in iEvents)
+			{
+				try
+				{
+					IEvent<A, B, C> iEvent = (IEvent<A, B, C>)obj;
+					iEvent.Run(a, b, c);
+				}
+				catch (Exception err)
+				{
+					Log.Error(err.ToString());
+				}
+			}
 		}
 	}
 }
