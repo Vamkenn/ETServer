@@ -49,7 +49,7 @@ namespace Model
 				{
 					continue;
 				}
-
+				
 				object obj = Activator.CreateInstance(type);
 
 				IMHandler imHandler = obj as IMHandler;
@@ -68,7 +68,7 @@ namespace Model
 			}
 		}
 
-		public void Handle(Session session, AMessage message)
+		public void Handle(Session session, uint rpcId, IMessage message)
 		{
 			if (!this.handlers.TryGetValue(message.GetType(), out List<IMHandler> actions))
 			{
@@ -80,7 +80,7 @@ namespace Model
 			{
 				try
 				{
-					ev.Handle(session, message);
+					ev.Handle(session, rpcId, message);
 				}
 				catch (Exception e)
 				{
