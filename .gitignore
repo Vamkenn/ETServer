@@ -1,0 +1,12 @@
+.vs/
+Bin/
+Logs/Log.txt
+Server/App/obj/
+Server/Hotfix/obj/
+Server/Model/obj/
+Server/ThirdParty/MongodbDriver/DotNetCoreDriver/MongoDB.Bson/obj/
+Server/ThirdParty/MongodbDriver/DotNetCoreDriver/MongoDB.Driver.Core/obj/
+Server/ThirdParty/MongodbDriver/DotNetCoreDriver/MongoDB.Driver/obj/
+Unity/Hotfix/obj/
+Unity/Library/
+Unity/obj/
